@@ -9,9 +9,9 @@ volumes:
 services:
 
 ### MySQL ################################################
-    mysql5.7: 
+    mysql_80:
       platform: linux/amd64 # Use this line for M1 Mac
-      container_name: mysql_57
+      container_name: mysql_80
       build:
         context: .
         dockerfile: Dockerfile
