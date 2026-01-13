@@ -1,0 +1,14 @@
+services:
+  doris:
+    image: apache/doris:doris-all-in-one-2.1.0
+    container_name: doris
+    hostname: doris
+    environment:
+      - FE_SERVERS=fe1:127.0.0.1:9010
+      - BE_ADDR=127.0.0.1:9050
+    ports:
+      - "8030:8030" # Web UI
+      - "9030:9030" # MySQL Protocol Client
+      - "8040:8040" # BE Web UI
+    volumes:
+      - ./doris:/opt/apache-doris
