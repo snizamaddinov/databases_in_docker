@@ -1,0 +1,152 @@
+{
+  "generated_at": "2026-02-19T13:10:41.843962Z",
+  "source_users_json": "users_2526.json",
+  "start_at": "2025-08-01T00:00:00Z",
+  "method2_switch_at": "2026-01-05T00:00:00Z",
+  "thresholds": [
+    60,
+    300,
+    600
+  ],
+  "visit_collection": "visit_log_2526",
+  "video_collection": "video_log_2526",
+  "events_collection": "visit_log_2526",
+  "users": [
+    {
+      "user_id": 1595357,
+      "username": "abdulkadir.erkmen2",
+      "stoys_id": "1715473",
+      "source_spend_time": 7403,
+      "source_new_spend_time_seconds": 8379,
+      "event_counts": {
+        "visit_event_count": 659,
+        "video_event_count": 0,
+        "all_event_count": 659,
+        "pre_switch_event_count": 302,
+        "connect_disconnect_event_count": 124
+      },
+      "comparisons": {
+        "method_1": {
+          "60": {
+            "total_seconds": 2971,
+            "session_count": 292,
+            "event_count": 659
+          },
+          "300": {
+            "total_seconds": 6874,
+            "session_count": 265,
+            "event_count": 659
+          },
+          "600": {
+            "total_seconds": 8757,
+            "session_count": 261,
+            "event_count": 659
+          }
+        },
+        "method_2": {
+          "60": {
+            "total_seconds": 4661,
+            "pre_switch_seconds": 1574,
+            "post_switch_connect_seconds": 3087,
+            "pre_switch_session_count": 154,
+            "pre_switch_event_count": 302,
+            "connect_pair_count": 61,
+            "connect_event_count": 124,
+            "connect_open_connection_count": 2,
+            "connect_anomaly_count": 0
+          },
+          "300": {
+            "total_seconds": 6854,
+            "pre_switch_seconds": 3767,
+            "post_switch_connect_seconds": 3087,
+            "pre_switch_session_count": 139,
+            "pre_switch_event_count": 302,
+            "connect_pair_count": 61,
+            "connect_event_count": 124,
+            "connect_open_connection_count": 2,
+            "connect_anomaly_count": 0
+          },
+          "600": {
+            "total_seconds": 8359,
+            "pre_switch_seconds": 5272,
+            "post_switch_connect_seconds": 3087,
+            "pre_switch_session_count": 136,
+            "pre_switch_event_count": 302,
+            "connect_pair_count": 61,
+            "connect_event_count": 124,
+            "connect_open_connection_count": 2,
+            "connect_anomaly_count": 0
+          }
+        }
+      }
+    },
+    {
+      "user_id": 1658439,
+      "username": "abdulhalik.ozdemir",
+      "stoys_id": "1719618",
+      "source_spend_time": 241,
+      "source_new_spend_time_seconds": 1001,
+      "event_counts": {
+        "visit_event_count": 124,
+        "video_event_count": 0,
+        "all_event_count": 124,
+        "pre_switch_event_count": 123,
+        "connect_disconnect_event_count": 0
+      },
+      "comparisons": {
+        "method_1": {
+          "60": {
+            "total_seconds": 585,
+            "session_count": 19,
+            "event_count": 124
+          },
+          "300": {
+            "total_seconds": 1001,
+            "session_count": 15,
+            "event_count": 124
+          },
+          "600": {
+            "total_seconds": 1513,
+            "session_count": 14,
+            "event_count": 124
+          }
+        },
+        "method_2": {
+          "60": {
+            "total_seconds": 585,
+            "pre_switch_seconds": 585,
+            "post_switch_connect_seconds": 0,
+            "pre_switch_session_count": 18,
+            "pre_switch_event_count": 123,
+            "connect_pair_count": 0,
+            "connect_event_count": 0,
+            "connect_open_connection_count": 0,
+            "connect_anomaly_count": 0
+          },
+          "300": {
+            "total_seconds": 1001,
+            "pre_switch_seconds": 1001,
+            "post_switch_connect_seconds": 0,
+            "pre_switch_session_count": 14,
+            "pre_switch_event_count": 123,
+            "connect_pair_count": 0,
+            "connect_event_count": 0,
+            "connect_open_connection_count": 0,
+            "connect_anomaly_count": 0
+          },
+          "600": {
+            "total_seconds": 1513,
+            "pre_switch_seconds": 1513,
+            "post_switch_connect_seconds": 0,
+            "pre_switch_session_count": 13,
+            "pre_switch_event_count": 123,
+            "connect_pair_count": 0,
+            "connect_event_count": 0,
+            "connect_open_connection_count": 0,
+            "connect_anomaly_count": 0
+          }
+        }
+      }
+    }
+  ]
+}

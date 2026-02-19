@@ -32,11 +32,15 @@ LOG_DIR = env_str("LOG_DIR", "logs")
 EXPORT_LOG_PATH = env_str("EXPORT_LOG_PATH", f"{LOG_DIR}/collect_users.log")
 PROCESS_LOG_PATH = env_str("PROCESS_LOG_PATH", f"{LOG_DIR}/process_users.log")
 UPDATE_LOG_PATH = env_str("UPDATE_LOG_PATH", f"{LOG_DIR}/update_users_spend_time.log")
+COMPARE_LOG_PATH = env_str("COMPARE_LOG_PATH", f"{LOG_DIR}/compare_spend_time_methods.log")
+COMPARE_OUTPUT_PATH = env_str("COMPARE_OUTPUT_PATH", f"users_{SEASON}_comparison.json")
 os.makedirs(LOG_DIR, exist_ok=True)
 
 PAGE_SIZE = env_int("PAGE_SIZE", 1000)
 THRESHOLD_SECONDS = env_int("THRESHOLD_SECONDS", 15 * 60)
+THRESHOLD_VALUES = env_str("THRESHOLD_VALUES", str(THRESHOLD_SECONDS))
 MIN_CREATED_AT = env_str("MIN_CREATED_AT", "2025-08-01T00:00:00Z")
+METHOD2_SWITCH_AT = env_str("METHOD2_SWITCH_AT", "2026-01-05T00:00:00Z")
 PROCESS_ONLY_NEW = env_bool("PROCESS_ONLY_NEW", True)
 
 MYSQL_HOST = env_str("MYSQL_HOST", "127.0.0.1")
@@ -55,5 +59,5 @@ MONGO_URI = env_str("MONGO_URI", "mongodb://127.0.0.1:27017")
 MONGO_DB = env_str("MONGO_DB", "")
 VISIT_COLLECTION = env_str("VISIT_COLLECTION", f"visit_log_{SEASON}")
 VIDEO_COLLECTION = env_str("VIDEO_COLLECTION", f"video_log_{SEASON}")
-
+EVENTS_COLLECTION = env_str("EVENTS_COLLECTION", VISIT_COLLECTION)
 
