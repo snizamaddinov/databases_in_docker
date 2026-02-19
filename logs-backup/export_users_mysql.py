@@ -40,7 +40,7 @@ def export_users():
         f"`{MYSQL_USERNAME_COLUMN}` AS username, "
         f"`{MYSQL_SPEND_TIME_COLUMN}` AS spend_time "
         f"FROM `{MYSQL_USER_TABLE}` "
-        f"WHERE `{MYSQL_SEASON_COLUMN}` = %s"
+        f"WHERE `{MYSQL_SEASON_COLUMN}` = %s and username in ('abdulkadir.erkmen2', 'abdulhalik.ozdemir')"
     )
 
     conn = pymysql.connect(

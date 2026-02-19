@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, timezone
 
 from pymongo import MongoClient
@@ -18,12 +19,12 @@ from config import (
 
 
 VIDEO_ACTIONS = {
-    "VideoWatched",
-    "VideoPlayed",
     "VideoPaused",
-    "VideoResumed",
-    "VideoWatching",
     "VideoCompleted",
+}
+
+SESSION_BREAK_ACTIONS = {
+    "LoggedIn",
 }
 
 
@@ -71,13 +72,20 @@ def fmt_ts(dt):
 def reset_log():
     with open(PROCESS_LOG_PATH, "w", encoding="utf-8") as log_file:
         log_file.write(
-            f"time={utc_now()} stage=start cutoff={fmt_ts(CUTOFF_AT)} threshold={THRESHOLD_SECONDS}\n"
+            f"stage=start cutoff={fmt_ts(CUTOFF_AT)} threshold={THRESHOLD_SECONDS}\n"
         )
 
 
 def log_line(text):
     with open(PROCESS_LOG_PATH, "a", encoding="utf-8") as log_file:
         log_file.write(text + "\n")
+
+
+def save_users(users):
+    tmp_path = USERS_JSON_PATH + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as output_file:
+        json.dump(users, output_file, ensure_ascii=True, indent=2, default=str)
+    os.replace(tmp_path, USERS_JSON_PATH)
 
 
 def add_id_pagination(query, last_id):
@@ -106,15 +114,13 @@ def paginated_find(collection, base_query, projection):
 
 def normalize_event(doc, source):
     event_time = parse_dt(doc.get("serverTime"))
-    if event_time is None:
-        event_time = parse_dt(doc.get("createdAt"))
+
     if event_time is None:
         return None
 
     return {
         "event_id": str(doc.get("_id")),
         "time": event_time,
-        "created_at": parse_dt(doc.get("createdAt")),
         "source": source,
         "action": doc.get("Actn") or "",
         "u_name": doc.get("uName"),
@@ -124,14 +130,15 @@ def normalize_event(doc, source):
 
 
 def visit_query(username, user_id):
-    created_filter = {"createdAt": {"$gt": CUTOFF_AT}}
-    if user_id is not None and username:
-        return {"$and": [created_filter, {"$or": [{"uId": user_id}, {"uName": username}]}]}
-    if user_id is not None:
-        return {"$and": [created_filter, {"uId": user_id}]}
+    created_filter = {"serverTime": {"$gt": CUTOFF_AT}}
+
+    filter = {"$and": [created_filter]}
+    # if user_id is not None:
+    #     filter['$and'].append({"uId": user_id})
     if username:
-        return {"$and": [created_filter, {"uName": username}]}
-    return created_filter
+        filter['$and'].append({"uName": username})
+
+    return filter
 
 
 def fetch_visit_events(visit_col, username, user_id):
@@ -140,16 +147,17 @@ def fetch_visit_events(visit_col, username, user_id):
         "uId": 1,
         "stoysId": 1,
         "Actn": 1,
-        "serverTime": 1,
-        "createdAt": 1,
+        "serverTime": 1
     }
 
     events = []
     stoys_id = None
-    for doc in paginated_find(visit_col, visit_query(username, user_id), projection):
+    v_query = visit_query(username=username, user_id=user_id)
+    for doc in paginated_find(visit_col, v_query, projection):
         event = normalize_event(doc, "visit")
         if event is None:
             continue
+
         events.append(event)
 
         event_stoys = event.get("stoys_id")
@@ -160,13 +168,13 @@ def fetch_visit_events(visit_col, username, user_id):
             stoys_id = event_stoys
         elif str(stoys_id) != str(event_stoys):
             log_line(
-                f"time={utc_now()} user={username} user_id={user_id} stoys_id_mismatch keep={stoys_id} skip={event_stoys}"
+                f"user={username} user_id={user_id} stoys_id_mismatch keep={stoys_id} skip={event_stoys}"
             )
     return events, stoys_id
 
 
 def fetch_video_events(video_col, username, stoys_id):
-    if not username or not stoys_id:
+    if  not username or not stoys_id:
         return []
 
     projection = {
@@ -174,13 +182,13 @@ def fetch_video_events(video_col, username, stoys_id):
         "uId": 1,
         "stoysId": 1,
         "Actn": 1,
-        "serverTime": 1,
-        "createdAt": 1,
+        "serverTime": 1
     }
     query = {
-        "createdAt": {"$gt": CUTOFF_AT},
+        "serverTime": {"$gt": CUTOFF_AT},
         "uName": username,
         "stoysId": stoys_id,
+        "Actn": {"$ne": "VideoWatching"}
     }
 
     events = []
@@ -203,8 +211,7 @@ def calculate_spend_time(username, user_id, events):
 
     first_event = events[0]
     log_line(
-        "time={time} user={user} user_id={user_id} event={event} source={source} event_time={event_time} gap=0 decision=start-session".format(
-            time=utc_now(),
+        "user={user} user_id={user_id} event={event} source={source} event_time={event_time} gap=0 decision=start-session".format(
             user=username,
             user_id=user_id,
             event=first_event.get("action"),
@@ -221,9 +228,18 @@ def calculate_spend_time(username, user_id, events):
 
         decision = "add"
         reason = "within-threshold"
+        action = event.get("action")
 
-        if gap > THRESHOLD_SECONDS:
-            is_video_event = event.get("source") == "video" or event.get("action") in VIDEO_ACTIONS
+        if action in SESSION_BREAK_ACTIONS:
+            duration = int((last_time - session_start).total_seconds())
+            if duration > 0:
+                total_spent_seconds += duration
+            session_start = current_time
+            session_count += 1
+            decision = "new-session"
+            reason = "explicit-break-action"
+        elif gap > THRESHOLD_SECONDS:
+            is_video_event = event.get("source") == "video" and event.get("action") in VIDEO_ACTIONS
             if is_video_event:
                 decision = "add"
                 reason = "video-gap"
@@ -238,8 +254,7 @@ def calculate_spend_time(username, user_id, events):
 
         last_time = current_time
         log_line(
-            "time={time} user={user} user_id={user_id} event={event} source={source} event_time={event_time} gap={gap} decision={decision} reason={reason}".format(
-                time=utc_now(),
+            " event_time={event_time} user={user} user_id={user_id} event={event} source={source}gap={gap} decision={decision} reason={reason} current_spent_time={total_spent_seconds}".format(
                 user=username,
                 user_id=user_id,
                 event=event.get("action"),
@@ -248,6 +263,7 @@ def calculate_spend_time(username, user_id, events):
                 gap=int(gap),
                 decision=decision,
                 reason=reason,
+                total_spent_seconds=total_spent_seconds
             )
         )
 
@@ -261,12 +277,11 @@ def calculate_spend_time(username, user_id, events):
 def process_user(user, visit_col, video_col):
     username = user.get("username")
     user_id = user.get("user_id")
-
+    log_line(f"Processing user: {username} - {user_id}")
     visit_events, stoys_id = fetch_visit_events(visit_col, username, user_id)
-    if not stoys_id and user.get("stoys_id"):
-        stoys_id = user.get("stoys_id")
-
+    log_line(f"Fetched visit logs. Total number: {len(visit_events)}, stoys id: {stoys_id}")
     video_events = fetch_video_events(video_col, username, stoys_id)
+    log_line(f"Fetched video logs. Total number: {len(video_events)}")
 
     all_events = visit_events + video_events
     new_spend_time_seconds, session_count = calculate_spend_time(username, user_id, all_events)
@@ -283,8 +298,7 @@ def process_user(user, visit_col, video_col):
     }
 
     log_line(
-        "time={time} user={user} user_id={user_id} stoys_id={stoys_id} visit_events={visit_count} video_events={video_count} sessions={sessions} new_spend_time_seconds={spent}".format(
-            time=utc_now(),
+        "user={user} user_id={user_id} stoys_id={stoys_id} visit_events={visit_count} video_events={video_count} sessions={sessions} new_spend_time_seconds={spent}".format(
             user=username,
             user_id=user_id,
             stoys_id=stoys_id,
@@ -297,8 +311,6 @@ def process_user(user, visit_col, video_col):
 
 
 def main():
-    reset_log()
-
     with open(USERS_JSON_PATH, "r", encoding="utf-8") as input_file:
         users = json.load(input_file)
 
@@ -316,13 +328,14 @@ def main():
                 continue
             process_user(user, visit_col, video_col)
             processed += 1
-
-        with open(USERS_JSON_PATH, "w", encoding="utf-8") as output_file:
-            json.dump(users, output_file, ensure_ascii=True, indent=2, default=str)
+            save_users(users)
+            log_line(
+                f"stage=checkpoint processed={processed} last_user_id={user.get('user_id')} output={USERS_JSON_PATH}"
+            )
     finally:
         client.close()
 
-    summary = f"time={utc_now()} stage=done processed={processed} skipped={skipped} output={USERS_JSON_PATH}"
+    summary = f"stage=done processed={processed} skipped={skipped} output={USERS_JSON_PATH}"
     log_line(summary)
     print(summary)
 

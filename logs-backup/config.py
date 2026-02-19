@@ -28,8 +28,11 @@ def env_bool(name, default):
 
 SEASON = env_str("SEASON", "2526")
 USERS_JSON_PATH = env_str("USERS_JSON_PATH", f"users_{SEASON}.json")
-EXPORT_LOG_PATH = env_str("EXPORT_LOG_PATH", "collect_users.log")
-PROCESS_LOG_PATH = env_str("PROCESS_LOG_PATH", "process_users.log")
+LOG_DIR = env_str("LOG_DIR", "logs")
+EXPORT_LOG_PATH = env_str("EXPORT_LOG_PATH", f"{LOG_DIR}/collect_users.log")
+PROCESS_LOG_PATH = env_str("PROCESS_LOG_PATH", f"{LOG_DIR}/process_users.log")
+UPDATE_LOG_PATH = env_str("UPDATE_LOG_PATH", f"{LOG_DIR}/update_users_spend_time.log")
+os.makedirs(LOG_DIR, exist_ok=True)
 
 PAGE_SIZE = env_int("PAGE_SIZE", 1000)
 THRESHOLD_SECONDS = env_int("THRESHOLD_SECONDS", 15 * 60)
@@ -52,3 +55,5 @@ MONGO_URI = env_str("MONGO_URI", "mongodb://127.0.0.1:27017")
 MONGO_DB = env_str("MONGO_DB", "")
 VISIT_COLLECTION = env_str("VISIT_COLLECTION", f"visit_log_{SEASON}")
 VIDEO_COLLECTION = env_str("VIDEO_COLLECTION", f"video_log_{SEASON}")
+
+
