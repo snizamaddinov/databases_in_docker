@@ -1,0 +1,7 @@
+.env
+.uv-cache/
+__pycache__/
+*.pyc
+collect_users.log
+process_users.log
+*/.DS_Store/*
