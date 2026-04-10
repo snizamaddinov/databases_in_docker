@@ -54,6 +54,7 @@ MYSQL_ID_COLUMN = env_str("MYSQL_ID_COLUMN", "id")
 MYSQL_USERNAME_COLUMN = env_str("MYSQL_USERNAME_COLUMN", "username")
 MYSQL_SPEND_TIME_COLUMN = env_str("MYSQL_SPEND_TIME_COLUMN", "spend_time")
 MYSQL_SEASON_COLUMN = env_str("MYSQL_SEASON_COLUMN", "season")
+MYSQL_ROLES_COLUMN = "roles"
 
 MONGO_URI = env_str("MONGO_URI", "mongodb://127.0.0.1:27017")
 MONGO_DB = env_str("MONGO_DB", "")

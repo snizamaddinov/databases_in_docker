@@ -73,23 +73,40 @@ def normalize_event(doc, source):
     }
 
 
-def calculate_method1(events, threshold_seconds):
+def _build_method1_session(session_index, start_event, end_event, event_count):
+    duration = int((end_event["time"] - start_event["time"]).total_seconds())
+    return {
+        "session_index": session_index,
+        "start_time": start_event["time"],
+        "end_time": end_event["time"],
+        "duration_seconds": duration,
+        "counted_in_total": duration > 0,
+        "event_count": event_count,
+        "start_event": start_event,
+        "end_event": end_event,
+    }
+
+
+def calculate_method1_with_sessions(events, threshold_seconds):
     if not events:
         return {
             "total_seconds": 0,
             "session_count": 0,
             "event_count": 0,
+            "sessions": [],
         }
 
     sorted_events = sorted(events, key=lambda item: (item["time"], item["event_id"]))
-    session_start = sorted_events[0]["time"]
-    last_time = sorted_events[0]["time"]
+    session_start_event = sorted_events[0]
+    last_event = sorted_events[0]
+    session_event_count = 1
     total_spent_seconds = 0
     session_count = 1
+    sessions = []
 
     for event in sorted_events[1:]:
         current_time = event["time"]
-        gap = int((current_time - last_time).total_seconds())
+        gap = int((current_time - last_event["time"]).total_seconds())
         if gap < 0:
             gap = 0
 
@@ -104,22 +121,47 @@ def calculate_method1(events, threshold_seconds):
                 new_session = True
 
         if new_session:
-            duration = int((last_time - session_start).total_seconds())
-            if duration > 0:
-                total_spent_seconds += duration
-            session_start = current_time
+            session = _build_method1_session(
+                session_index=session_count,
+                start_event=session_start_event,
+                end_event=last_event,
+                event_count=session_event_count,
+            )
+            sessions.append(session)
+            if session["duration_seconds"] > 0:
+                total_spent_seconds += session["duration_seconds"]
+            session_start_event = event
             session_count += 1
+            session_event_count = 1
+        else:
+            session_event_count += 1
 
-        last_time = current_time
+        last_event = event
 
-    final_duration = int((last_time - session_start).total_seconds())
-    if final_duration > 0:
-        total_spent_seconds += final_duration
+    final_session = _build_method1_session(
+        session_index=session_count,
+        start_event=session_start_event,
+        end_event=last_event,
+        event_count=session_event_count,
+    )
+    sessions.append(final_session)
+    if final_session["duration_seconds"] > 0:
+        total_spent_seconds += final_session["duration_seconds"]
 
     return {
         "total_seconds": total_spent_seconds,
         "session_count": session_count,
         "event_count": len(sorted_events),
+        "sessions": sessions,
+    }
+
+
+def calculate_method1(events, threshold_seconds):
+    stats = calculate_method1_with_sessions(events, threshold_seconds)
+    return {
+        "total_seconds": stats["total_seconds"],
+        "session_count": stats["session_count"],
+        "event_count": stats["event_count"],
     }
 
 
@@ -132,6 +174,17 @@ def split_before_date(events, split_at):
 
 
 def calculate_connect_disconnect(events):
+    stats = calculate_connect_disconnect_with_sessions(events)
+    return {
+        "total_seconds": stats["total_seconds"],
+        "pair_count": stats["pair_count"],
+        "open_connection_count": stats["open_connection_count"],
+        "anomaly_count": stats["anomaly_count"],
+        "event_count": stats["event_count"],
+    }
+
+
+def calculate_connect_disconnect_with_sessions(events):
     if not events:
         return {
             "total_seconds": 0,
@@ -139,6 +192,7 @@ def calculate_connect_disconnect(events):
             "open_connection_count": 0,
             "anomaly_count": 0,
             "event_count": 0,
+            "sessions": [],
         }
 
     sorted_events = sorted(events, key=lambda item: (item["time"], item["event_id"]))
@@ -147,6 +201,7 @@ def calculate_connect_disconnect(events):
     pair_count = 0
     anomaly_count = 0
     processed_event_count = 0
+    sessions = []
 
     for event in sorted_events:
         action = event.get("action")
@@ -166,14 +221,15 @@ def calculate_connect_disconnect(events):
         if action == "Connect":
             if key in open_connections:
                 anomaly_count += 1
-            open_connections[key] = event_time
+            open_connections[key] = event
             continue
 
-        start_time = open_connections.pop(key, None)
-        if start_time is None:
+        start_event = open_connections.pop(key, None)
+        if start_event is None:
             anomaly_count += 1
             continue
 
+        start_time = start_event["time"]
         duration = int((event_time - start_time).total_seconds())
         if duration < 0:
             anomaly_count += 1
@@ -181,6 +237,19 @@ def calculate_connect_disconnect(events):
 
         total_seconds += duration
         pair_count += 1
+        sessions.append(
+            {
+                "pair_index": pair_count,
+                "start_time": start_time,
+                "end_time": event_time,
+                "duration_seconds": duration,
+                "counted_in_total": True,
+                "start_event": start_event,
+                "end_event": event,
+                "session_id": event.get("session_id"),
+                "connection_id": event.get("connection_id"),
+            }
+        )
 
     return {
         "total_seconds": total_seconds,
@@ -188,4 +257,5 @@ def calculate_connect_disconnect(events):
         "open_connection_count": len(open_connections),
         "anomaly_count": anomaly_count,
         "event_count": processed_event_count,
+        "sessions": sessions,
     }

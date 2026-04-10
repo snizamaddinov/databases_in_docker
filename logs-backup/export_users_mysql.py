@@ -15,6 +15,7 @@ from config import (
     MYSQL_USER,
     MYSQL_USER_TABLE,
     MYSQL_USERNAME_COLUMN,
+    MYSQL_ROLES_COLUMN,
     SEASON,
     USERS_JSON_PATH,
 )
@@ -38,9 +39,12 @@ def export_users():
     query = (
         f"SELECT `{MYSQL_ID_COLUMN}` AS user_id, "
         f"`{MYSQL_USERNAME_COLUMN}` AS username, "
-        f"`{MYSQL_SPEND_TIME_COLUMN}` AS spend_time "
+        f"`{MYSQL_ROLES_COLUMN}` AS roles, "
+        f"`{MYSQL_SPEND_TIME_COLUMN}` AS spend_time, "
+        "`last_used_at` AS last_used_at "
         f"FROM `{MYSQL_USER_TABLE}` "
-        f"WHERE `{MYSQL_SEASON_COLUMN}` = %s and username in ('abdulkadir.erkmen2', 'abdulhalik.ozdemir')"
+        f"WHERE `{MYSQL_SEASON_COLUMN}` = 2526 AND `{MYSQL_USERNAME_COLUMN}` NOT LIKE '%metodbox%' and first_used_at is not null "
+        "LIMIT 10"
     )
 
     conn = pymysql.connect(
@@ -54,7 +58,7 @@ def export_users():
     )
     try:
         with conn.cursor() as cur:
-            cur.execute(query, (SEASON,))
+            cur.execute(query)
             rows = cur.fetchall()
     finally:
         conn.close()
@@ -64,8 +68,9 @@ def export_users():
         user = {
             "user_id": row.get("user_id"),
             "username": row.get("username"),
+            "roles": json.loads(row.get('roles'))[0],
             "spend_time": row.get("spend_time"),
-            "season": str(SEASON),
+            "last_used_at": row.get("last_used_at"),
             "status": "new",
         }
         users.append(user)

@@ -132,7 +132,7 @@ def fetch_visit_events(visit_col, username, user_id, start_at):
 
 
 def fetch_video_events(video_col, username, stoys_id, start_at):
-    if not username or stoys_id in [None, ""]:
+    if True or not username or stoys_id in [None, ""]:
         return []
 
     match_query = {
@@ -140,7 +140,28 @@ def fetch_video_events(video_col, username, stoys_id, start_at):
         "stoysId": stoys_id,
         "serverTime": {"$gte": start_at},
     }
-    return aggregate_events(video_col, match_query, "video")
+    projection = {
+        "_id": 1,
+        "serverTime": 1,
+        "Actn": 1,
+        "uName": 1,
+        "uId": 1,
+        "stoysId": 1,
+        "sessionId": 1,
+        "connectionId": 1,
+    }
+
+    events = []
+    cursor = (
+        video_col.find(match_query, projection)
+        .sort([("serverTime", 1), ("_id", 1)])
+        .batch_size(PAGE_SIZE)
+    )
+    for doc in cursor:
+        event = normalize_event(doc, "video")
+        if event is not None:
+            events.append(event)
+    return events
 
 
 def fetch_connect_disconnect_events(events_col, username, user_id, switch_at):
@@ -195,7 +216,7 @@ def calculate_user_methods(user, visit_col, video_col, events_col, thresholds, s
         "username": username,
         "stoys_id": stoys_id,
         "source_spend_time": user.get("spend_time"),
-        "source_new_spend_time_seconds": user.get("new_spend_time_seconds"),
+        "last_used_at": user.get('last_used_at'),
         "event_counts": {
             "visit_event_count": len(visit_events),
             "video_event_count": len(video_events),
